@@ -12,6 +12,7 @@ from django.conf import settings
 import decimal
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator # for Class Based Views
+from django.template.loader import render_to_string
 
 
 # Create your views here.
@@ -60,19 +61,28 @@ class RegistrationView(View):
     def get(self, request):
         form = RegistrationForm()
         return render(request, 'account/register.html', {'form': form})
-    
+
     def post(self, request):
         form = RegistrationForm(request.POST)
         if form.is_valid():
             messages.success(request, "Congratulations! Registration Successful!")
             form.save()
         return render(request, 'account/register.html', {'form': form})
-        
+
 
 @login_required
 def profile(request):
     addresses = Address.objects.filter(user=request.user)
     orders = Order.objects.filter(user=request.user)
+    msg_html = render_to_string('store/NEWEMAIL.html')
+    send_mail(
+        'CONGRATS',
+        'you are now able to use our services',
+        'anurag2u1967@gmail.com',
+        [request.user.email],
+        html_message=msg_html,
+        fail_silently=False,
+    )
     return render(request, 'account/profile.html', {'addresses':addresses, 'orders':orders})
 
 
@@ -116,7 +126,7 @@ def add_to_cart(request):
         cp.save()
     else:
         Cart(user=user, product=product).save()
-    
+
     return redirect('store:cart')
 
 
@@ -183,7 +193,7 @@ def minus_cart(request, cart_id):
 def checkout(request):
     user = request.user
     address_id = request.GET.get('address')
-    
+
     address = get_object_or_404(Address, id=address_id)
     # Get all the products of User in Cart
     cart = Cart.objects.filter(user=user)
@@ -198,6 +208,15 @@ def checkout(request):
 @login_required
 def orders(request):
     all_orders = Order.objects.filter(user=request.user).order_by('-ordered_date')
+    msg_html = render_to_string('store/email.html')
+    send_mail(
+        'Thanks for purchasing',
+        'thanks for purchase',
+        'anurag2u1967@gmail.com',
+        [request.user.email],
+        html_message=msg_html,
+        fail_silently=False,
+    )
     return render(request, 'store/orders.html', {'orders': all_orders})
 
 
